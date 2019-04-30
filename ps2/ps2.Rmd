@@ -1,6 +1,6 @@
 ---
 title: "POLS 207"
-subtitle: "Problem Set 2"
+subtitle: "Problem Set 2[^*]"
 author: "Villaseñor-Derbez, J.C."
 output:
   pdf_document: 
@@ -13,6 +13,8 @@ header-includes:
   - \usepackage{amsfonts}
 # bibliography: references.bib
 ---
+
+[^*]: Available on GitHUb: https://github.com/jcvdav/POLS207/blob/master/ps2/ps2.pdf
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
@@ -192,7 +194,7 @@ lm(pct_missing ~ treat_invite, data = olken_dat) %>%
                        header = F,
                        title = "Estimate of the Sample Average Treatment Effect.",
                        single.row = T
-                       )
+  )
 
 ```
 
@@ -290,28 +292,28 @@ The sharp null is a non-parametric test. This means that we de not make any assu
 
 ```{r}
 sharp_null_fxn <- 
-  function(y = NULL, D = NULL, n_perms = 10000, seed = 42, ...){
+  function(y = NULL, D = NULL, n_perms = 10000, two_sided = FALSE, seed = 42, ...){
     # Run checks
     ## Did the user specify all parameters?
     if(is.null(y))
     {stop("You did not specify a vector of outcomes.")
-      }
+    }
     if(is.null(D)){
       stop("You did not specify a vector of treatments.")
-      }
+    }
     n_obs <- length(y)
     # Are parameters the correct size?
     if(n_obs != length(D)){
       stop(paste0("y and D have different lengths(", n_obs," and ", length(D),")."))
-      }
+    }
     # Is D the correct class?
     if(!is.logical(D)){
       stop("D must be a logical vector with TRUE or FALSE indicating treatment or control.")
-      }
+    }
     # Is the suggested number of permutations large enough?
     if((n_perms / n_obs) < 10){
       warning("Your number of permutations might not be high enough")
-      }
+    }
     
     # Get treated and control units
     treated <- y[D]
@@ -340,8 +342,14 @@ sharp_null_fxn <-
     # Add a line with the true difference in means
     abline(v = true_diff_in_means, col = "red", lwd = 2, lty = "dashed")
     # Calculate probabilities
-    p <- sum(omega_diff_in_means >= true_diff_in_means) / n_perms
-}
+    if(two_sided){
+      p <- sum(abs(omega_diff_in_means) >= abs(true_diff_in_means)) / n_perms
+    } else {
+      p <- sum(omega_diff_in_means >= true_diff_in_means) / n_perms
+    }
+    
+    return(p)
+  }
 ```
 
 ## Apply your function to the data from the Olken experiment in the previous section. How do your results compare to the results under the t-test or regression? Which do you trust, and how do you interpret any differences?
@@ -358,7 +366,7 @@ sharp_null <- sharp_null_fxn(y = y, D = D)
 ```
 
 
-With the previous run, `r sharp_null * 100`\% of the $\hat{\tau}(\omega)$ had a value equal to or greater than $\hat\tau_{ATE}$. In terms of our one-sided hypothesis, this means that only 24.25\% of the random treatment assignment vectors produced an effect size larger than or equal to our estimated effect. The t-test and the regression suggested that there was a 0.44 and 0.48 chance of randomly obtaining a value equal to or larger than the difference in means estimate. The sharp null tells us there is a greater probability (0.75) of this occurring at random. The interpretation is a bit different, given that the null hypothesis assumes no change on any unit.
+With the previous run, `r sharp_null * 100`\% of the $\hat{\tau}(\omega)$ had a value equal to or greater than $\hat\tau_{ATE}$. In terms of our one-sided hypothesis, this means that only 24.25\% of the random treatment assignment vectors produced an effect size larger than or equal to our estimated effect. I can re-run the function asking for the two-sided (`sharp_null_fxn(y = y, D = D, two_sided = T)`), in which case $p = 0.4869$. The t-test and the regression suggested that there was a 0.44 and 0.48 chance of randomly obtaining a value equal to or larger than the difference in means estimate. The interpretation is a bit different, given that the null hypothesis assumes no change on any unit.
 
 
 
