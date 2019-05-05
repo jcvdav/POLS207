@@ -1,0 +1,295 @@
+---
+title: "POLS 207"
+subtitle: "Problem Set 3[^*]"
+author: "Villaseñor-Derbez, J.C."
+output:
+  pdf_document: 
+    fig_caption: yes
+    toc: no
+    number_sections: no
+header-includes:
+  # - \usepackage{float}
+  # - \floatplacement{figure}{H}
+  - \usepackage{amsfonts}
+# bibliography: references.bib
+---
+
+[^*]: Available on GitHUb: https://github.com/jcvdav/POLS207/blob/master/ps3/ps3.pdf
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+Problem 1: NSW experiment and observational comparison
+
+```{r}
+# Load packages
+suppressPackageStartupMessages({
+  library(startR)
+  library(Matching)
+  library(ebal)
+  library(foreign)
+  library(here)
+  library(tidyverse)
+})
+
+# Load data
+nsw_dat <- read.dta("nsw_exper.dta")
+```
+
+## Using the experimental data, obtain a simple unbiased estimate of the ATE of NSW on 1978 earnings, its SE and a 95% confidence interval.
+
+Because this is experimental data, the difference in means is an unbiased estimate of the ATE.
+
+```{r}
+# Simple unbiased estimate of the ATE
+mT <- mean(nsw_dat$re78[nsw_dat$nsw == 1], na.rm = T)
+mC <- mean(nsw_dat$re78[nsw_dat$nsw == 0], na.rm = T)
+
+ATE <- mT - mC
+```
+
+```{r}
+# Calculate standard errors
+# Get variances
+sigma_y1 <- var(nsw_dat$re78[nsw_dat$nsw == 1], na.rm = T)
+sigma_y0 <- var(nsw_dat$re78[nsw_dat$nsw == 0], na.rm = T)
+
+# Get sample sizes
+N1 <- sum(nsw_dat$nsw == 1, na.rm = T)
+N0 <- sum(nsw_dat$nsw == 0, na.rm = T)
+
+# Calculate Standard Errors
+SE <- sqrt((sigma_y1 / N1) + (sigma_y0 / N0))
+```
+
+```{r}
+# Calculate 95% CIs
+CI_h <- ATE + (1.96 * SE)
+CI_l <- ATE - (1.96 * SE)
+```
+
+The $\hat{ATE} = 1794.343$, with $SE = 670.99$ and $CI_{95} = (479.18, 3109.49)$.
+
+## With the experimental data, use OLS to estimate the ATE controlling for age, education, race, ethnicity, marital status, and employment and earnings in 1974 and 1975. Report the estimate and its SE. Compare it to the one obtained in (a), explaining the reason for any similarities or differences.
+
+The table below shows the coefficient estimates for the stated regression. The $\hat{ATE}_{OLS} = 1682.58$. The previous estimate was slightly higher ($\hat{ATE} = 1794.343$), but the OLS estimate is within the 95% CIs calculated before.
+
+```{r, results = "asis"}
+lm(re78 ~ nsw + age + educ + black + hisp + married + re74 + re75, data = nsw_dat) %>% 
+  stargazer::stargazer(.,
+                       se = estimatr::starprep(.,
+                                               se_type = "HC2"),
+                       t.auto = T,
+                       p.auto = T,
+                       header = F,
+                       title = "Estimate of the Sample Average Treatment Effect.",
+                       single.row = T
+  )
+```
+
+
+## File `nsw_psid_withtreated.dta` contains treated units taken from the experiment, but control units replaced by the non-experimental sample from the PSID.
+
+
+```{r}
+psid_dat <- read.dta("nsw_psid_withtreated.dta")
+```
+
+### Check the covariate balance in this merged dataset. Decide on a few sensible balance statistics and report them in a table.
+
+```{r}
+balance <- psid_dat %>%
+  drop_na() %>%
+  MatchBalance(
+    nsw ~ age + educ + black + hisp + married + re74 + re75 + u74 + u75,
+    data = .,
+    print.level = 0
+  ) %>%
+  baltest.collect(
+    var.names = c(
+      "age", 
+      "educ",
+      "black",
+      "hisp",
+      "married",
+      "re74",
+      "re75",
+      "u74",
+      "u75"),
+    after = F
+  ) %>%
+  as_tibble(rownames = "Covariate") %>%
+  dplyr::select(-contains("qq"), -contains("pooled"))
+
+knitr::kable(
+  balance,
+  booktabs = T,
+  col.names = c(
+    "Covariate",
+    "Mean (Treatment)",
+    "Mean (Control)",
+    "Standardized difference",
+    "Variance ratio",
+    "T p-value",
+    "KS p-value"
+  ),
+  caption = "Pre-matching balance of covariates."
+)
+```
+
+
+### How do the treatment and control group differ?
+
+The treatment group has younger people, with less education, a greater percentage of black and hispanics, and most people are single. The treatment group has lower average real earnings. The figure below shows the density distributions for each covariate in the dataset.
+
+```{r}
+psid_dat %>% 
+  select(-c(re78, u78)) %>% 
+  gather(variable, value, -c(nsw)) %>% 
+  mutate(nsw = nsw == 1) %>% 
+  ggplot(aes(x = value, fill = nsw, group = nsw)) +
+  geom_density(alpha = 0.25) +
+  facet_wrap(~variable, scales = "free") +
+  ggtheme_plot() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+
+### Among the observed covariates, what seem to be the most important factors that determine selection into the program (the “treatment”)?
+
+The data suggest that your real earnings for 1974 and 1975 and ethnicity are prediuctors of selection into the program.
+
+### Estimate the (naive) ATE of the program on 1978 earnings without adjusting for any of the covariates. Report the estimate and a standard error.
+
+```{r}
+# Simple unbiased estimate of the ATE for psid data
+mTpsid <- mean(psid_dat$re78[psid_dat$nsw == 1], na.rm = T)
+mCpsid <- mean(psid_dat$re78[psid_dat$nsw == 0], na.rm = T)
+
+ATEpsid <- mTpsid - mCpsid
+```
+
+```{r}
+# Calculate standard errors
+# Get variances
+sigma_y1psid <- var(psid_dat$re78[psid_dat$nsw == 1], na.rm = T)
+sigma_y0psid <- var(psid_dat$re78[psid_dat$nsw == 0], na.rm = T)
+
+# Get sample sizes
+N1psid <- sum(psid_dat$nsw == 1, na.rm = T)
+N0psid <- sum(psid_dat$nsw == 0, na.rm = T)
+
+# Calculate Standard Errors
+SEpsid <- sqrt((sigma_y1psid / N1) + (sigma_y0psid / N0))
+```
+
+In this case, the naive ATE estimate for 1978 earnigns appears to be $ATE = -15204.78$, suggesting that the program reduces the average earnings. The standard error is now $SE 1124.821$ 
+
+## Repeat (b) using the non-experimental data. Does the estimate of the ATE change? Why or why not?
+
+The table below shows a drastic change in my ATE. By including covariates, the sign and magnitude of the ATE changes. This, however, still produces an estimate lower to the one obtaines with experimental data.
+
+```{r, results = "asis"}
+lm(re78 ~ nsw + age + educ + black + hisp + married + re74 + re75, data = psid_dat) %>%  
+  stargazer::stargazer(.,
+                       se = estimatr::starprep(.,
+                                               se_type = "HC2"),
+                       t.auto = T,
+                       p.auto = T,
+                       header = F,
+                       title = "Estimate of the Sample Average Treatment Effect using the non-experimental data.",
+                       single.row = T
+  )
+```
+
+
+## Using the non-experimental data, condition (only) on the marital status of individuals, and manually compute the subclassification estimator of the ATT.
+
+```{r}
+married_treated <- psid_dat$re78[psid_dat$nsw == 1 & psid_dat$married == 1]
+married_control <- psid_dat$re78[psid_dat$nsw == 0 & psid_dat$married == 1]
+
+single_treated <- psid_dat$re78[psid_dat$nsw == 1 & psid_dat$married == 0]
+single_control <- psid_dat$re78[psid_dat$nsw == 0 & psid_dat$married == 0]
+
+married_ATT <- mean(married_treated) - mean(married_control)
+single_ATT <- mean(single_treated) - mean(single_control)
+
+n_treated <- sum(psid_dat$nsw == 1)
+n_treated_married <- sum(psid_dat$nsw == 1 & psid_dat$married == 1)
+pr_married_treated <- n_treated_married / n_treated
+pr_single_treated <- 1 - pr_married_treated
+
+ATT_married <- (pr_single_treated * single_ATT) + (pr_married_treated + married_ATT)
+```
+
+The subclassification ATT conditioning on marital status is $ATT = -22962.13$.
+
+
+## Repeat the above, this time conditioning (only) on Unemployment status in 1975 using a sub-classification estimator of the ATT.
+
+```{r}
+unemployed_treated <- psid_dat$re78[psid_dat$nsw == 1 & psid_dat$u75 == 1]
+unemployed_control <- psid_dat$re78[psid_dat$nsw == 0 & psid_dat$u75 == 1]
+
+employed_treated <- psid_dat$re78[psid_dat$nsw == 1 & psid_dat$u75 == 0]
+employed_control <- psid_dat$re78[psid_dat$nsw == 0 & psid_dat$u75 == 0]
+
+unemployed_ATT <- mean(unemployed_treated) - mean(unemployed_control)
+employed_ATT <- mean(employed_treated) - mean(employed_control)
+
+n_treated_unemployed <- sum(psid_dat$nsw == 1 & psid_dat$u75 == 1)
+pr_unemployed_treated <- n_treated_unemployed / n_treated
+pr_employed_treated <- 1 - pr_unemployed_treated
+
+ATT_u75 <- (pr_employed_treated * employed_ATT) + (pr_unemployed_treated + unemployed_ATT)
+```
+
+
+The subclassification ATT conditioning on employment status is $ATT = -6043.50$.
+
+# Problem 2: Matching on NSW
+
+## With the non-experimental data, show the balance on the data. Then match, using the following covariates: “age", “educ", “black", “hisp", “married", “re74", “re75", “u74", and “u75”. Show the new balance tables, and estimate the ATT.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
