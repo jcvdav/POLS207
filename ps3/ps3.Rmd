@@ -223,10 +223,10 @@ n_treated_married <- sum(psid_dat$nsw == 1 & psid_dat$married == 1)
 pr_married_treated <- n_treated_married / n_treated
 pr_single_treated <- 1 - pr_married_treated
 
-ATT_married <- (pr_single_treated * single_ATT) + (pr_married_treated + married_ATT)
+ATT_married <- (pr_single_treated * single_ATT) + (pr_married_treated * married_ATT)
 ```
 
-The subclassification ATT conditioning on marital status is $ATT = -22962.13$.
+The subclassification ATT conditioning on marital status is $ATT = -11124.4$.
 
 
 ## Repeat the above, this time conditioning (only) on Unemployment status in 1975 using a sub-classification estimator of the ATT.
@@ -245,20 +245,112 @@ n_treated_unemployed <- sum(psid_dat$nsw == 1 & psid_dat$u75 == 1)
 pr_unemployed_treated <- n_treated_unemployed / n_treated
 pr_employed_treated <- 1 - pr_unemployed_treated
 
-ATT_u75 <- (pr_employed_treated * employed_ATT) + (pr_unemployed_treated + unemployed_ATT)
+ATT_u75 <- (pr_employed_treated * employed_ATT) + (pr_unemployed_treated * unemployed_ATT)
 ```
 
 
-The subclassification ATT conditioning on employment status is $ATT = -6043.50$.
+The subclassification ATT conditioning on employment status is $ATT = -6244.687$.
 
 # Problem 2: Matching on NSW
 
 ## With the non-experimental data, show the balance on the data. Then match, using the following covariates: “age", “educ", “black", “hisp", “married", “re74", “re75", “u74", and “u75”. Show the new balance tables, and estimate the ATT.
 
+The table below shows post-matching balance, where balance is achieved for most of the covariates (not for education or re75). Estimating the ATT with biad adjustment, our ATT estimate is eroded ($ATT = 1.16\times 10^{-11}$; $t_{184} = 1.042; p = 0.29$)
+
+```{r}
+X <- psid_dat %>% 
+  select(-c(nsw, u78)) %>% 
+  as.matrix()
+
+matched <- Match(Y = psid_dat$re78,
+                 Tr = psid_dat$nsw,
+                 X = X, M = 1,
+                 estimand = "ATT",
+                 BiasAdjust = T)
+
+balance_matched <- MatchBalance(
+  match.out = matched,
+  formul = nsw ~ age + educ + black + hisp + married + re74 + re75 + u74 + u75,
+  data = psid_dat,
+  print.level = 0) %>%
+  baltest.collect(
+    var.names = c(
+      "age", 
+      "educ",
+      "black",
+      "hisp",
+      "married",
+      "re74",
+      "re75",
+      "u74",
+      "u75"),
+    after = T
+  ) %>%
+  as_tibble(rownames = "Covariate") %>%
+  dplyr::select(-contains("qq"), -contains("pooled"))
+
+knitr::kable(
+  balance_matched,
+  booktabs = T,
+  col.names = c(
+    "Covariate",
+    "Mean (Treatment)",
+    "Mean (Control)",
+    "Standardized difference",
+    "Variance ratio",
+    "T p-value",
+    "KS p-value"
+  ),
+  caption = "Pre-matching balance of covariates."
+)
+```
 
 
 
+## What is the importance of the bias adjustment? When is it most important to use the bias adjustment?
 
+## In the non-experimental sample, compare the number of treated to untreated units. Comment on the result, and whether it is good or bad in your view
+
+## In the non-experimental sample, estimate propensity scores using a logistic regression. Report the distributions of propensity scores for treated and control groups and comment on the overlap.
+
+```{r}
+glm_fit <- glm(nsw ~ age + educ + black + hisp + married + re74 + re75 + u74 + u75,
+               data = psid_dat,
+               family = "binomial" (link=logit))
+
+fit <- glm_fit$fit
+
+D <- psid_dat$nsw == 1
+# 
+# PrD <- mean(D)
+# 
+# IPW <- (D * PrD + (1-D) * (1-PrD)) / (D * fit + (1-D) * (1-fit))
+
+tibble(D = D, fit = fit) %>% 
+  ggplot(aes(x  = fit, y = ..scaled.., group = D, fill = D)) +
+  geom_density(alpha = 0.5) +
+  ggtheme_plot() +
+  scale_fill_brewer(palette = "Set1")
+
+```
+
+## Now using the experimental sample, estimate propensity scores. Compare distributions of the propensity scores for treated and control groups here. What do you observe? Compare your results with part (d).
+
+```{r}
+glm_fit_exp <- glm(nsw ~ age + educ + black + hisp + married + re74 + re75 + u74 + u75,
+               data = nsw_dat,
+               family = "binomial" (link=logit))
+
+fit_exp <- glm_fit_exp$fit
+
+D_exp <- nsw_dat$nsw == 1
+
+tibble(D = D_exp, fit = fit_exp) %>% 
+  ggplot(aes(x  = fit, y = ..scaled.., group = D, fill = D)) +
+  geom_density(alpha = 0.5) +
+  ggtheme_plot() +
+  scale_fill_brewer(palette = "Set1")
+```
 
 
 
