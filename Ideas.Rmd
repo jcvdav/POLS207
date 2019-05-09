@@ -1,0 +1,65 @@
+---
+title: "Ideas"
+author: "Villaseñor-Derbez J.C."
+output:
+  pdf_document: 
+    fig_caption: yes
+    toc: no
+    number_sections: no
+header-includes:
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+  - \usepackage{natbib}
+  - \usepackage{amsfonts}
+bibliography: references.bib
+---
+
+# Causal inference for Marine Protected Area evaluation
+
+Marine Protected Areas are a form of spatially managing the oceans. Marine reservers, or no-take zones, are areas where all extractive activities are off-limits. The objective of marine reserves is to recover overfished stocks by reducing fishing mortallity. If the recovery is successfull enough, the biomass growth within the protected region eventually spills over to adjacent waters, where organisms can be harvested.
+
+Traditional evaluation of effectiveness of marine reserves has focuesd on Control-Impact assessments or Before-After comparisions. Both of these approaches are subject to bias introduced by the inherent spatial or temporal differences of each approach. Furthermore, a Control-Impact evaluation can also be biased by the spillover effect. Additionally, Marine Reserves are often implemented in areas that were historically productive, or in areas that would act as sources, therefore enhancing spillover.
+
+These characteristics (non-random selection) and spillover (SUTVA violation) make evaluation of marine reserves much more difficult. Even a BACI design and a DiD approach is not able to disentangle the effect of the reserve on zone-specific biomass. Two recent papers [@larsen_2019;@kerr_2019] discuss causal inference in the natural sciences, a topic I am interested in.
+
+If I were to pursue this project, I would like to do either or both of the following:
+
+Simulate a spatially explicit population where marine reserves are implemented at random, favoring historically productive cites, and favoring historically "sterile" sites (*i.e.* "paper parks"). The spillover effect, and magnitude of SUTVA violation, will be a function of fish movement, a parameter often know to biologists. I am interested in understanding how this biological information, in combination with knowledge of treatment assignment procss, might enable us to still identify the effect of the reserve.
+
+I also have observational data on ~30 marine reserves placed around Mexico. These follow a BACI sampling design, and I may be able to use this for some empirical work, if my synthetic data from the simulations is not a good enough requirement.
+
+# The effects of climate variation in illegal fishing
+
+Rising ocean temperatures are causing poleward redistribution of marine species. As species move into, out of, and trhough countries Exclusive Economic Zones, fishers might be likely to track biomass centriods to maintain a profit margin, even if this means momentarily intruding into foreign waters. El Niño Southern Oscillation (ENSO) is known to cause short-term redistribution of stocks, similar to what is expected to occurr with global ocean warming. 
+
+Previous literature has shown that climate variation may influence people's behavior [@hsiang_2013,@hsiang_2011,@carleton_2016]. In this idea I would like to quantify the effect of ENSO events on illegal fishing, by which I mean a fishing event where the flag of a vessel does not match the exclusive economic zone in which it occurrs. Specifically, I would like to follow an approach similar to @hsiang_2011. They identified ENSO-teleconected areas by correlating surface temperature to the NINO index. Then, they regressed global conflict on NINO3 index, comparing it's effect between ENSO teleconnected and non-teleconnected regions.
+
+In this case, I have already identified ENSO teleconnected marine regions, providing me with my two groups. I have vessel tracks for ~50,000 fishing vessels globally, for which I observe their flags, position, and timestamp every 10 seconds to 5 minutes from 2012 to present. Using these data, I can obtain spatially-explicit estimates of illegal fishing. The goal would be to compare how illegal fishing changes through time in the ENSO-teleconnected and non-ENSO-teleconnected regions as the 2015 ENSO event progressed.
+
+I may need to think more about the treatment assignment process (I think it is random), and more about the approach to this answer.
+
+# References
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

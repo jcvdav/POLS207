@@ -78,7 +78,7 @@ The $\hat{ATE} = 1794.343$, with $SE = 670.99$ and $CI_{95} = (479.18, 3109.49)$
 The table below shows the coefficient estimates for the stated regression. The $\hat{ATE}_{OLS} = 1682.58$. The previous estimate was slightly higher ($\hat{ATE} = 1794.343$), but the OLS estimate is within the 95% CIs calculated before.
 
 ```{r, results = "asis"}
-lm(re78 ~ nsw + age + educ + black + hisp + married + re74 + re75, data = nsw_dat) %>% 
+lm(re78 ~ nsw + age + educ + black + hisp + married + re74 + re75 + u74 + u75, data = nsw_dat) %>% 
   stargazer::stargazer(.,
                        se = estimatr::starprep(.,
                                                se_type = "HC2"),
@@ -255,11 +255,11 @@ The subclassification ATT conditioning on employment status is $ATT = -6244.687$
 
 ## With the non-experimental data, show the balance on the data. Then match, using the following covariates: “age", “educ", “black", “hisp", “married", “re74", “re75", “u74", and “u75”. Show the new balance tables, and estimate the ATT.
 
-The table below shows post-matching balance, where balance is achieved for most of the covariates (not for education or re75). Estimating the ATT with biad adjustment, our ATT estimate is eroded ($ATT = 1.16\times 10^{-11}$; $t_{184} = 1.042; p = 0.29$)
+The table below shows post-matching balance, where balance is achieved for most of the covariates (not for education or re75). Estimating the ATT with biad adjustment, our ATT estimate is eroded ($ATT = 1684$; $t_{184} = 1.432; p = 0.29$)
 
 ```{r}
 X <- psid_dat %>% 
-  select(-c(nsw, u78)) %>% 
+  select(-c(nsw, re78, u78)) %>% 
   as.matrix()
 
 matched <- Match(Y = psid_dat$re78,
@@ -321,10 +321,6 @@ glm_fit <- glm(nsw ~ age + educ + black + hisp + married + re74 + re75 + u74 + u
 fit <- glm_fit$fit
 
 D <- psid_dat$nsw == 1
-# 
-# PrD <- mean(D)
-# 
-# IPW <- (D * PrD + (1-D) * (1-PrD)) / (D * fit + (1-D) * (1-fit))
 
 tibble(D = D, fit = fit) %>% 
   ggplot(aes(x  = fit, y = ..scaled.., group = D, fill = D)) +
@@ -359,8 +355,31 @@ tibble(D = D_exp, fit = fit_exp) %>%
 
 
 
+## Back to the non-experimental sample. Trim off observations that have propensity scores lower than 0.1. Then report balance statistics for the trimmed data. Compare the results to the balance you initially saw for this dataset. Do the results differ, and why or why not?
+
+```{r}
+tibble(D = D, fit = fit) %>% 
+  filter(!fit < 0.1) %>% 
+  ggplot(aes(x  = fit, y = ..scaled.., group = D, fill = D)) +
+  geom_density(alpha = 0.5) +
+  ggtheme_plot() +
+  scale_fill_brewer(palette = "Set1")
+```
 
 
+## In the non-experimental sample, match on the estimated propensity scores (from part d) using Match() to obtain an estimator of the average effect of the treatment on the treated for the NSW program.
+
+
+```{r}
+matched_PS <- Match(Y = psid_dat$re78,
+                    Tr = psid_dat$nsw,
+                    X = fit,
+                    M = 1,
+                    estimand = "ATT",
+                    BiasAdjust = T)
+
+summary(matched_PS)
+```
 
 
 
