@@ -124,7 +124,7 @@ $$
 
 We assume that PA and NJ are independent of each other, so $Cov(\gamma, \alpha) = 0$. The same is true for $Cov(\delta, \alpha)$, $Cov(\gamma, \beta)$ $Cov(\delta, \beta)$.
 
-Finally, since $Cov(X, Y) = Cov(Y, X)$, corresponding cells (*i.e.* A_{1, 2} and A_{2, 1}) will have the same values.
+Finally, since $Cov(X, Y) = Cov(Y, X)$, corresponding cells have the same values (*i.e.* $A_{1, 2} = A_{2, 1}$).
 
 With the rules above, we can define our variance-covariance matrix as follows:
 
