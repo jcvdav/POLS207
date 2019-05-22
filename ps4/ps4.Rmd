@@ -255,7 +255,7 @@ The $ATT_z$ is still valid if $Z$ is exogenous, but the interpretation of the ca
 
 ## Suppose a colleague who has not taken PS200D asks you to explain why the Wald estimate – the reduced form divided by the first stage effect – identifies the ATE among the compliers. Provide a clear and intuitive explanation.
 
-
+Normally we would want to randomly assign a treatment in order to estimate the effect that the treatment has. However, we can not always randomly assign it. A way around this is to use instrumental variables. A good instrumental variable randomly assigns units into treatment but does not directly modify the outcome. Now we have two steps: the process by which an instrumental variable assigns treatment at random, and the effect that being assigned to treatment has on the outcome, given potential outcomes.
 
 ## Explain why we do not need to write the potential outcomes with two arguments, i.e. as Yi(D, Z) for treatment D and instrument Z
 
