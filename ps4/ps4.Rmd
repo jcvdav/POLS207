@@ -27,7 +27,7 @@ PA    | $\gamma$ | $delta$
 
 ### Define the difference-in-differences (DID) estimand in terms of these values, and concisely explain what this represents.
 
-Given values that represent group- and time-specific means $\alpha$, $\beta$, $\gamma$, $\delta$, the DID estimand is the difference in slopes. We first calculate the temporal trend as the November value minus the February value, for each state. For NY, the temporal trend is given by $\beta - \alpha$ and for PA the temporal trend is given by $\delta - gamma$. We assume NJ and PA behave similarly through time, and that any deviation from the expected trend is caused by the change in wages, which only affects NJ. In other words we can calculate the difference as what we observe (for NJ) minus what one would have expected, had the intervention not occurred (PA). Therefore, the difference in the temporal trends is our DiD estimand: $(\beta - \alpha) - (\delta - \gamma)$.
+Given values that represent group- and time-specific means $\alpha$, $\beta$, $\gamma$, $\delta$, the DID estimand is the difference in time trends observed for each state. We first calculate the temporal trend as the November value minus the February value, for each state. For NY, the temporal trend is given by $\beta - \alpha$ and for PA the temporal trend is given by $\delta - \gamma$. We assume NJ and PA behave similarly through time, and that any deviation from the expected trend is caused by the change in wages, which only affects NJ. In other words we can calculate the difference as what we observe (for NJ) minus what one would have expected, had the intervention not occurred (NJ in Nov + trend of PA). Therefore, the difference in the temporal trends is our DiD estimand: $(\beta - \alpha) - (\delta - \gamma)$.
 
 ### Consider the eight potential quantities $\{\alpha(0), \alpha(1), \beta(0)...\}$. Let these represent the mean potential level of FTE employment levels that would have realized if the minimum wage had been raised in each state at each time. For example, $\alpha(0) = \mathbb{E}[Y_i(D = 0)|T = February, state = NJ]$. Define the causal quantity of interest, the ATT, in terms of these potential outcomes. Describe which of these are observed.
 
@@ -46,18 +46,14 @@ The potential untreated outcome for the treated or the FTE levels for NJ in Febr
 
 ### Show that the DID estimand (part (i)) can identify the ATT (part (ii)). Show all your work and be sure to clearly state the assumption(s) needed.
 
-We do not observe what FTE in NJ would have been in NJ, had NJ not been subject to a change in minimum wage (*i.e.* treated).
-
-In part i we stated that the estimand of interest was given by $DiD = (\beta - \alpha) - (\delta - \gamma)$.
-
-Based on table 1, these observed quantities correspond to:
+We do not observe what FTE in NJ would have been in NJ, had NJ not been subject to a change in minimum wage (*i.e.* treated). In part i we stated that the estimand of interest was given by $DiD = (\beta - \alpha) - (\delta - \gamma)$. Based on table 1, these observed quantities correspond to:
 
 State | February | November
 ------|----------|-----------
 NJ    | $\mathbb{E}[Y_0(0) | D = 1]$  | $\mathbb{E}[Y_1(1) | D = 1]$
 PA    | $\mathbb{E}[Y_0(0) | D = 0]$ | $\mathbb{E}[Y_0(1) | D = 0]$
 
-If we are willing to assume that in the absence of treatment NJ would have had the same time trend as PA, we can leverage our counterfactual design to estimate the ATT. In other words, if we assume that the observed value for NJ in February plus the time trend observed for PA gives us what NJ would have been had it not raised minimum salary. We can then use the difference between the expected and the realized value to estimate our ATT.
+If we are willing to assume that in the absence of treatment NJ would have had the same time trend as PA, we can leverage our counterfactual design to estimate the ATT. In other words, we assume that the observed value for NJ in February plus the time trend observed for PA gives us what NJ would have been had it not raised minimum salary. We can then use the difference between the expected and the realized value to estimate our ATT.
 
 Taking the terms in the table above and rearranging them to match the DiD, we would obtain:
 
@@ -96,7 +92,7 @@ d_long <- d %>%
          time = fct_relevel(time, "pre"))
 ```
 
-\clearpage
+<!-- \clearpage -->
 
 ### Estimate all quantities in above and write them in a similar table
 
@@ -110,21 +106,29 @@ d_long %>%
                caption = "Estimates for quantities of interest in Table 1.")
 ```
 
+### Then in a second table, fill in all cells in the following variance-covariance matrix
+
+#### Formulas
+
 The variances in the diagonal are given by:
 
 $$
-Var(X) = \mathbb{E}[(X - \mu)^2]
+\mathrm{Var}(X) = \mathbb{E}[(X - \mu)^2]
 $$
 
 The covariances in all other cells are given by:
 
 $$
-Cov(X, Y) = \mathbb{E}[(X - \mathbb{E}[X])(Y - \mathbb{E}[Y])]
+\mathrm{Cov}(X, Y) = \mathbb{E}[(X - \mathbb{E}[X])(Y - \mathbb{E}[Y])]
 $$
 
-We assume that PA and NJ are independent of each other, so $Cov(\gamma, \alpha) = 0$. The same is true for $Cov(\delta, \alpha)$, $Cov(\gamma, \beta)$ $Cov(\delta, \beta)$.
+#### Assumptions
 
-Finally, since $Cov(X, Y) = Cov(Y, X)$, corresponding cells have the same values (*i.e.* $A_{1, 2} = A_{2, 1}$).
+We assume that PA and NJ are independent of each other, so $\mathrm{Cov}(\gamma, \alpha) = 0$. The same is true for $\mathrm{Cov}(\delta, \alpha)$, $Cov(\gamma, \beta)$ $\mathrm{Cov}(\delta, \beta)$.
+
+#### Assert equivalence
+
+Finally, since $\mathrm{Cov}(X, Y) = \mathrm{Cov}(Y, X)$, corresponding cells have the same values (*i.e.* $A_{1, 2} = A_{2, 1}$).
 
 With the rules above, we can define our variance-covariance matrix as follows:
 
@@ -138,12 +142,14 @@ vars <- d_long %>%
 #Covariance between alpha and beta
 nj_cov <- d %>% 
   filter(state == "nj") %$% 
-  cov(emp_pre, emp_post, use = "pairwise.complete.obs")
+  cov(emp_pre, emp_post,
+      use = "pairwise.complete.obs")
 
 # Covariances between gamma and delta
 pa_cov <- d %>% 
   filter(state == "pa") %$% 
-  cov(emp_pre, emp_post, use = "pairwise.complete.obs")
+  cov(emp_pre, emp_post,
+      use = "pairwise.complete.obs")
 ```
 
 \clearpage
