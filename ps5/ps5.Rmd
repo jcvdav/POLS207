@@ -1,0 +1,291 @@
+---
+title: "POLS 207"
+subtitle: "Problem Set 5[^*]"
+author: "Villaseñor-Derbez, J.C."
+output:
+  pdf_document: 
+    fig_caption: yes
+    toc: no
+    number_sections: no
+header-includes:
+  # - \usepackage{float}
+  # - \floatplacement{figure}{H}
+  - \usepackage{amsfonts}
+# bibliography: references.bib
+---
+
+[^*]: Available on GitHub: https://github.com/jcvdav/POLS207/blob/master/ps5/
+
+# Problem 1: 2SLS
+
+## a) Show results from (1) the first stage regression, (2) the reduced form regression, and (3) the 2SLS estimation using the following two specifications:
+
+$$log(PGP^{1995}_i) = \beta_0 + \beta_1 avexpr_i + \epsilon_i$$
+
+$$avexpr_i = \gamma_0 + \gamma_1logem4 + \mu_i$$
+
+And 
+
+$$log(PGP^{1995}_i) = \beta_0 + \beta_1 avexpr_i + \beta_2latabst + \epsilon_i$$
+
+$$avexpr_i = \gamma_0 + \gamma_1logem4 + \gamma_2latabst + \mu_i$$
+
+```{r}
+# Load packages
+suppressPackageStartupMessages({
+  library(here)
+  library(stargazer)
+  library(foreign)
+  library(AER)
+  library(tidyverse)
+})
+```
+
+```{r}
+# Load the data
+arj <- read.dta(file = here("ps5", "arj.dta"))
+```
+
+```{r}
+# First stage
+first_simple <- lm(avexpr ~ logem4, data = arj)
+first_lat <- lm(avexpr ~ logem4 + lat_abst, data = arj)
+
+# Reduced form
+reduced_simple <- lm(logpgp95 ~ logem4, data = arj)
+reduced_lat <- lm(logpgp95 ~ logem4 + lat_abst, data = arj)
+
+# Two-stage using IVreg
+two_stage_simple <- ivreg(logpgp95 ~ avexpr | logem4, data = arj)
+two_stage_lat <- ivreg(logpgp95 ~ avexpr + lat_abst | logem4 + lat_abst, data = arj)
+```
+
+```{r, results = "asis"}
+stargazer(list(first_simple, first_lat),
+          single.row = T,
+          header = F,
+          title = "Coefficients for first-stage regression.")
+```
+
+```{r, results = "asis"}
+stargazer(list(reduced_simple, reduced_lat),
+          single.row = T,
+          header = F,
+          title = "Coefficients for reduced form regression.")
+```
+
+```{r, results = "asis"}
+stargazer(list(two_stage_simple, two_stage_lat),
+          single.row = T,
+          header = F,
+          title = "Coefficients for 2SLS.")
+```
+
+
+\begin{table}[!htbp] \centering
+  \caption{Two-stage least squares regression table}
+  \label{}
+\begin{tabular}{llcc}\hline\hline
+
+& & (1) & (2) \\ 
+
+& & no covariates & including latitude \\ \hline
+
+& & & \\
+
+First stage (dep: \texttt{avexpr}): & \texttt{logem4} & `r first_simple$coefficients[2]` &  `r first_lat$coefficients[2]` \\
+
+ & & &  \\
+
+ & \texttt{lat\_abst}  & & `r first_lat$coefficients[3]` \\ 
+
+ & &  & \\ \hline
+
+Reduced form (dep: \texttt{logpgp95}): & \texttt{logem4}  & `r reduced_simple$coefficients[2]` &  `r reduced_lat$coefficients[2]` \\
+
+ & &  &  \\
+
+ & \texttt{lat\_abst}  & & `r reduced_lat$coefficients[3]` \\ 
+
+ & &  &  \\ \hline
+
+2SLS (dep: \texttt{logpgp95}): & \texttt{avexpr}  & `r reduced_simple$coefficients[2] / first_simple$coefficients[2]`& `r reduced_lat$coefficients[2] / first_lat$coefficients[2]` \\
+
+ & &  &  \\
+
+ & \texttt{lat\_abst}  & & `r reduced_lat$coefficients[3] - first_lat$coefficients[3]` \\ 
+
+ & &  & \\ \hline  
+
+\end{tabular}
+\end{table}
+
+\clearpage
+
+
+## Regress `logpgp95`, `avexpr`, and `logem4` on `lat_abst` (“partialling out" the effect of latitude) and re-do the 2SLS estimation using the residuals. Do you get the same result as in Column 2 in the previous question? (Don’t worry about the standard errors – actually they are quite close to the right ones.)
+
+The regression table below shows the OLS estimates for each stage, as well as the IV regression. Using the residuals after removing the effect of latitude, we obtain the same coefficients as the second column in the previous question.
+
+```{r}
+res_logpgp95 <- lm(logpgp95 ~ lat_abst, data = arj)$residuals
+res_avexpr <- lm(avexpr ~ lat_abst, data = arj)$residuals
+res_logem4 <- lm(logem4 ~ lat_abst, data = arj)$residuals
+```
+
+```{r}
+# First stage
+res_first_simple <- lm(res_avexpr ~ res_logem4)
+
+# Reduced form
+res_reduced_simple <- lm(res_logpgp95 ~ res_logem4)
+
+# Two-stage using IVreg
+res_two_stage_simple <- ivreg(res_logpgp95 ~ res_avexpr | res_logem4)
+```
+
+```{r, results = "asis"}
+stargazer(... = list(res_first_simple, res_reduced_simple, res_two_stage_simple),
+          single.row = T,
+          header = F,
+          title = "Two-stage regression on the residuals of each variable on latabst.")
+```
+
+
+# Problem 2: Fuzzy IV
+
+```{r}
+# Load data
+angrist_lavy <- read.dta(here("ps5", "angrist_lavy.dta"))
+```
+
+
+## a) Say you were to run a regression of reading scores on class sizes. Would this provide a valid estimate of the causal effect of class size? Why or why not?
+
+
+## b) Use the data and plot the actual average class size (solid line) and the class size implied by Maimonides rule (dashed line) against enrollment count. That is, replicate Figure 1 of the paper for the fourth grade. What do the results imply about the determinants of class size? (you may find the `floor()` function useful).
+
+```{r}
+angrist_lavy %>% 
+  mutate(Maimonides = angrist_lavy$enrollment / (floor((angrist_lavy$enrollment - 1) / 40) + 1)) %>% 
+  select(enrollment, classize, Maimonides) %>% 
+  gather(variable, value, -enrollment) %>%
+  ggplot(aes(x = enrollment, y = value, linetype = variable)) +
+  geom_line() +
+  startR::ggtheme_plot() +
+  lims(y = c(0, 50)) +
+  labs(x = "Enrollment", y = "Class size") +
+  guides(linetype = guide_legend(title = "Variable"))
+```
+
+```{r}
+# Define discontinuity points to keep
+disc_vec <- c(36:46, 76:86, 116:126, 156:166, 196:206)
+
+# Define forcing variable
+angrist_lavy_disc <- angrist_lavy %>% 
+  filter(enrollment %in% disc_vec) %>% 
+  rowwise() %>% 
+  mutate(disc_point = case_when(between(enrollment, 36, 46) ~ 41,
+                                between(enrollment, 76, 86) ~ 81,
+                                between(enrollment, 116, 126) ~ 121,
+                                between(enrollment, 156, 166) ~ 161,
+                                T ~ 201),
+         forcing = enrollment - disc_point,
+         side = forcing >= 0)
+```
+
+
+```{r}
+ggplot(data = angrist_lavy_disc,
+       mapping = aes(x = forcing, y = avgverb, color = side)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+```{r}
+# Effect of discontinuities on class size
+class_model <- lm(classize ~ forcing, data = angrist_lavy_disc)
+
+# Effect of disc on reading comprehension scores
+score_model <- lm(avgverb ~ forcing + side, data = angrist_lavy_disc)
+```
+
+```{r, results = "asis"}
+stargazer(list(class_model, score_model),
+          single.row = T,
+          header = F,
+          title = "Effect of the discontinuities on class size and average reading comprehension scores.")
+```
+
+
+# Probelm 3: Bootstrapping
+
+```{r}
+set.seed(43)
+
+vector1 <- rnorm(500, mean = 7, sd = 3)
+
+vector2 <- rnorm(500, mean = 5, sd = 2)
+```
+
+
+```{r}
+boot <- function(vec1, vec2, rep) {
+  n <- length(vec1)
+  mean_vec <- numeric(length = n)
+  
+  for (i in 1:rep) {
+    
+    vec1_i <- sample(x = vec1, size = n, replace = T)
+    vec2_i <- sample(x = vec2, size = n, replace = T)
+    
+    mean_i <- mean(vec1_i) - mean(vec2_i)
+    
+    mean_vec[i] <- mean_i
+  }
+  
+  return(mean_vec)
+}
+
+
+a <- boot(vector1, vector2, 10000)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
