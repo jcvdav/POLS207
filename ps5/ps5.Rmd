@@ -337,7 +337,7 @@ stargazer(Fvar5_model,
 
 ```{r}
 # Calculate the regime model
-regime_model <- lm(regime ~ + market + lgdppc + gdpgrowt + tradeofg + overallb + generalg + d2 + d3 + country,
+regime_model <- lm(regime ~ market + lgdppc + gdpgrowt + tradeofg + overallb + generalg + d2 + d3 + country,
                    data = jensen)
 
 # Get mean squared residuals by country
